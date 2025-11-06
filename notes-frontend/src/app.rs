@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use leptos::{prelude::*, task::spawn_local};
 use serde::{Deserialize, Serialize};
 use serde_wasm_bindgen::{from_value, to_value};
@@ -19,26 +21,57 @@ extern "C" {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-struct File {
+struct RecordingId {
     pub id: u32,
-    pub path: String,
+    pub file: String,
+    pub name: String,
+    pub note: Option<String>,
+    pub uploaded: bool,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+struct Event<T> {
+    pub event: String,
+    pub payload: T,
+    pub id: u32,
+}
+#[derive(Clone, Serialize, Deserialize)]
+struct Recording {
+    pub file: String,
+    pub name: String,
+    pub note: Option<String>,
+    pub uploaded: bool,
 }
 
 #[derive(Serialize)]
 struct NewRec {
-    pub path: String,
+    file: String,
+    name: String,
 }
 
 #[component]
 pub fn App() -> impl IntoView {
-    let (files, add_file) = signal::<Vec<File>>(Vec::new());
+    let (files, add_file) = signal::<HashMap<u32, Recording>>(HashMap::new());
 
     Effect::new(move || {
         spawn_local(async move {
             let cb: Closure<dyn Fn(JsValue)> = Closure::new(move |data: JsValue| {
-                add_file.update(|f| f.push(from_value(data).unwrap()));
+                add_file.update(|f| {
+                    log(data.clone());
+                    let event: Event<RecordingId> = from_value(data).unwrap();
+                    let rec = event.payload;
+                    f.insert(
+                        rec.id,
+                        Recording {
+                            file: rec.file,
+                            name: rec.name,
+                            note: rec.note,
+                            uploaded: rec.uploaded,
+                        },
+                    );
+                });
             });
-            listen("new_file", cb.as_ref().unchecked_ref()).await;
+            listen("file", cb.as_ref().unchecked_ref()).await;
             cb.forget();
         });
     });
@@ -57,14 +90,14 @@ pub fn App() -> impl IntoView {
 
     view! {
         <button on:click=|_| spawn_local(async {invoke_argless("plugin:mic-recorder|start_recording").await;})>Start</button>
-        <button on:click=move |_| spawn_local(async move {invoke("new_rec", to_value(&NewRec {path: invoke_argless("plugin:mic-recorder|stop_recording").await.try_into().unwrap()}).unwrap()).await;})>Stop</button>
+        <button on:click=move |_| spawn_local(async move {invoke("new_rec", to_value(&NewRec {file: invoke_argless("plugin:mic-recorder|stop_recording").await.try_into().unwrap(), name: "test".to_string()}).unwrap()).await;})>Stop</button>
         <ul>
             <For
                 each=move || files.get()
-                key=|file| file.id
+                key=|file| file.0
                 children=move |file| {
                     view!{
-                        <li>{file.path}</li>
+                        <li>{file.1.file}</li>
                     }
                 }
             />
