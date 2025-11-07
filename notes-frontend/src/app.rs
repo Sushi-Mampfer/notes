@@ -25,7 +25,6 @@ struct RecordingId {
     pub id: u32,
     pub file: String,
     pub name: String,
-    pub note: Option<String>,
     pub uploaded: bool,
 }
 
@@ -35,11 +34,11 @@ struct Event<T> {
     pub payload: T,
     pub id: u32,
 }
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone)]
 struct Recording {
+    pub id: u32,
     pub file: String,
-    pub name: String,
-    pub note: Option<String>,
+    pub name: ReadSignal<String>,
     pub uploaded: bool,
 }
 
@@ -51,7 +50,9 @@ struct NewRec {
 
 #[component]
 pub fn App() -> impl IntoView {
-    let (files, add_file) = signal::<HashMap<u32, Recording>>(HashMap::new());
+    let (files, add_file) = signal::<Vec<Recording>>(Vec::new());
+    let (files_update, add_file_update) =
+        signal::<HashMap<u32, WriteSignal<String>>>(HashMap::new());
 
     Effect::new(move || {
         spawn_local(async move {
@@ -60,15 +61,16 @@ pub fn App() -> impl IntoView {
                     log(data.clone());
                     let event: Event<RecordingId> = from_value(data).unwrap();
                     let rec = event.payload;
-                    f.insert(
-                        rec.id,
-                        Recording {
-                            file: rec.file,
-                            name: rec.name,
-                            note: rec.note,
-                            uploaded: rec.uploaded,
-                        },
-                    );
+                    let (name, set_name) = signal(rec.name);
+                    add_file_update.update(|f| {
+                        f.insert(rec.id, set_name);
+                    });
+                    f.push(Recording {
+                        id: rec.id,
+                        file: rec.file,
+                        name: name,
+                        uploaded: rec.uploaded,
+                    });
                 });
             });
             listen("file", cb.as_ref().unchecked_ref()).await;
@@ -94,10 +96,10 @@ pub fn App() -> impl IntoView {
         <ul>
             <For
                 each=move || files.get()
-                key=|file| file.0
+                key=|file| file.id
                 children=move |file| {
                     view!{
-                        <li>{file.1.file}</li>
+                        <li>{file.file}</li>
                     }
                 }
             />
