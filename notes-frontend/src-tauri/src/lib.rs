@@ -43,6 +43,17 @@ pub async fn run() {
                 .execute(&pool)
                 .await
                 .unwrap();
+                query(
+                    r#"
+                    CREATE TABLE IF NOT EXISTS config (
+                        id INTEGER PRIMARY KEY CHECK (id = 1),
+                        url TEXT
+                    )
+                "#,
+                )
+                .execute(&pool)
+                .await
+                .unwrap();
                 let rows: Vec<Recording> = query_as(r#"SELECT * FROM recordings ORDER BY id"#)
                     .fetch_all(&pool)
                     .await
@@ -58,7 +69,7 @@ pub async fn run() {
         })
         .plugin(tauri_plugin_mic_recorder::init())
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![new, edit])
+        .invoke_handler(tauri::generate_handler![new, edit, delete])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
@@ -69,7 +80,7 @@ async fn new(app_handle: tauri::AppHandle, file: String, name: String) {
         r#"
         INSERT INTO recordings (file, name, uploaded)
         VALUES (?, ?, 0)
-         RETURNING id
+        RETURNING id
     "#,
     )
     .bind(&file)
@@ -106,4 +117,22 @@ async fn edit(app_handle: tauri::AppHandle, id: u32, name: String) {
     .await
     .unwrap();
     app_handle.emit("file", rec).unwrap();
+}
+
+#[tauri::command]
+async fn delete(app_handle: tauri::AppHandle, id: u32) {
+    let file: String = query(
+        r#"
+        DELETE FROM recordings
+        WHERE id = ?
+        RETURNING file
+    "#,
+    )
+    .bind(&id)
+    .fetch_one(&app_handle.state::<AppData>().pool)
+    .await
+    .unwrap()
+    .get("file");
+    fs::remove_file(file).unwrap();
+    app_handle.emit("delete", id).unwrap();
 }
