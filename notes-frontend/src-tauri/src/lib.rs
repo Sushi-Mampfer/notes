@@ -1,7 +1,9 @@
 use serde::{Deserialize, Serialize};
 use sqlx::{query, query_as, sqlite::SqliteConnectOptions, FromRow, Pool, Row, Sqlite};
 use std::{fs, str::FromStr};
-use tauri::{async_runtime::spawn, Emitter, Listener, Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri::{
+    async_runtime::spawn, window, Emitter, Listener, Manager, WebviewUrl, WebviewWindowBuilder,
+};
 
 struct AppData {
     pub pool: Pool<Sqlite>,
@@ -139,15 +141,15 @@ async fn delete(app_handle: tauri::AppHandle, id: u32) {
 
 #[tauri::command]
 fn upload(app_handle: tauri::AppHandle) {
-    let upload_window = WebviewWindowBuilder::new(
+    let window = WebviewWindowBuilder::new(
         &app_handle,
-        "Upload",
-        WebviewUrl::App("index.html#/upload".into()),
+        "upload_window",
+        tauri::WebviewUrl::App("".into()),
     )
     .title("Upload")
-    .closable(true)
-    .resizable(true)
     .inner_size(800.0, 600.0)
-    .build()
-    .unwrap();
+    .center();
+    dbg!("hi");
+    window.build().unwrap();
+    dbg!("hi");
 }
