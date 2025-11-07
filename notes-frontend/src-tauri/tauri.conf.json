@@ -14,8 +14,8 @@
     "windows": [
       {
         "title": "notes-frontend",
-        "width": 700,
-        "height": 1000,
+        "width": 350,
+        "height": 550,
         "resizable": false,
         "maximizable": false
       }

@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use sqlx::{query, query_as, sqlite::SqliteConnectOptions, FromRow, Pool, Row, Sqlite};
 use std::{fs, str::FromStr};
-use tauri::{async_runtime::spawn, Emitter, Listener, Manager};
+use tauri::{async_runtime::spawn, Emitter, Listener, Manager, WebviewUrl, WebviewWindowBuilder};
 
 struct AppData {
     pub pool: Pool<Sqlite>,
@@ -69,7 +69,7 @@ pub async fn run() {
         })
         .plugin(tauri_plugin_mic_recorder::init())
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![new, edit, delete])
+        .invoke_handler(tauri::generate_handler![new, edit, delete, upload])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
@@ -135,4 +135,19 @@ async fn delete(app_handle: tauri::AppHandle, id: u32) {
     .get("file");
     fs::remove_file(file).unwrap();
     app_handle.emit("delete", id).unwrap();
+}
+
+#[tauri::command]
+fn upload(app_handle: tauri::AppHandle) {
+    let upload_window = WebviewWindowBuilder::new(
+        &app_handle,
+        "Upload",
+        WebviewUrl::App("index.html#/upload".into()),
+    )
+    .title("Upload")
+    .closable(true)
+    .resizable(true)
+    .inner_size(800.0, 600.0)
+    .build()
+    .unwrap();
 }

@@ -1,74 +1,155 @@
 :root {
-  font-family: Helvetica, Inter, Avenir, Arial, sans-serif;
-  font-size: 16px;
-  line-height: 24px;
-  font-weight: 400;
+	font-family: Helvetica, Inter, Avenir, Arial, sans-serif;
+	font-size: 16px;
+	line-height: 24px;
+	font-weight: 400;
 
-  color: #f6f6f6;
-  background-color: #2f2f2f;
+	color: #f6f6f6;
+	background-color: #2f2f2f;
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  -webkit-text-size-adjust: 100%;
+	font-synthesis: none;
+	text-rendering: optimizeLegibility;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	-webkit-text-size-adjust: 100%;
 }
 
 .container {
-  margin: 0;
-  padding-top: 10vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  text-align: center;
+	margin: 0;
+	padding-top: 10vh;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	text-align: center;
 }
 
 .logo.tauri:hover {
-  filter: drop-shadow(0 0 2em #24c8db);
+	filter: drop-shadow(0 0 2em #24c8db);
 }
 
 a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
+	font-weight: 500;
+	color: #646cff;
+	text-decoration: inherit;
 }
 
 a:hover {
-  color: #535bf2;
+	color: #535bf2;
 }
 
 h1 {
-  text-align: center;
+	text-align: center;
 }
 
 input,
 button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  color: #ffffff;
-  background-color: #0f0f0f98;
-  transition: border-color 0.25s;
-  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
+	border-radius: 8px;
+	border: 1px solid transparent;
+	padding: 0.6em 1.2em;
+	font-size: 1em;
+	font-weight: 500;
+	font-family: inherit;
+	color: #ffffff;
+	background-color: #0f0f0f98;
+	transition: border-color 0.25s;
+	box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
 }
 
 button {
-  cursor: pointer;
+	cursor: pointer;
 }
 
 button:hover {
-  border-color: #396cd8;
+	border-color: #396cd8;
 }
 
 button:active {
-  border-color: #396cd8;
-  background-color: #0f0f0f69;
+	border-color: #396cd8;
+	background-color: #0f0f0f69;
 }
 
 input,
 button {
-  outline: none;
+	outline: none;
+}
+
+body {
+	padding: 0;
+	margin: 0;
+}
+
+.storp {
+	padding: 0;
+	margin: 0;
+	margin-left: 25vw;
+	margin-top: 10vw;
+	width: 50vw;
+	height: 50vw;
+	border-radius: 50%;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+.storp>svg {
+	width: 27vw;
+	height: 27vw;
+}
+
+.prompt {
+	border-radius: 7.5vw;
+	position: absolute;
+	left: 10%;
+	width: 80%;
+	height: auto;
+	padding: 0;
+	margin: 0;
+	background-color: #3f3f3f;
+	top: 0;
+	display: flex;
+	align-items: center;
+	flex-direction: column;
+}
+
+.prompt>h1 {
+	text-align: center;
+}
+
+.prompt>input {
+	padding: 3vw;
+	width: 60vw;
+}
+
+.prompt>div {
+	margin: 4vw 0;
+	width: 66vw;
+	display: flex;
+	justify-content: space-between;
+}
+
+.prompt>div>button {
+	width: calc(62vw/2);
+}
+
+ul {
+	padding: 0 15vw;
+}
+
+ul>li {
+	height: 15vw;
+	padding: 0;
+	margin-bottom: 5vw;
+}
+
+ul>li>button {
+	width: 15vw;
+	height: 15vw;
+	padding: 0;
+}
+
+ul>li>p {
+	height: 15vw;
+	line-height: 15vw;
+	display: inline-block;
+	width: 40vw;
 }

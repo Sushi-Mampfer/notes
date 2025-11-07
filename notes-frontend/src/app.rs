@@ -1,4 +1,4 @@
-use std::{collections::HashMap, rc::Rc, sync::Arc};
+use std::{collections::BTreeMap, sync::Arc};
 
 use leptos::{ev, prelude::*, task::spawn_local};
 use serde::{Deserialize, Serialize};
@@ -65,9 +65,9 @@ struct NewRec {
 #[component]
 pub fn App() -> impl IntoView {
     let (recording, set_recording) = signal(false);
-    let (files, add_file) = signal::<HashMap<u32, Recording>>(HashMap::new());
+    let (files, add_file) = signal::<BTreeMap<u32, Recording>>(BTreeMap::new());
     let (files_update, add_file_update) =
-        signal::<HashMap<u32, WriteSignal<String>>>(HashMap::new());
+        signal::<BTreeMap<u32, WriteSignal<String>>>(BTreeMap::new());
 
     Effect::new(move || {
         spawn_local(async move {
@@ -118,32 +118,53 @@ pub fn App() -> impl IntoView {
     });
 
     Effect::new(|| spawn_local(emit_argless("ready")));
+
     let prompt_data = RwSignal::new("".to_string());
-    let prompt_show = RwSignal::new(false);
+    let prompt_show = RwSignal::new(None);
+    let new_prompt_data = RwSignal::new("".to_string());
+    let new_prompt_show = RwSignal::new(None);
 
     view! {
         <Prompt
             question="Name".to_string()
             data=prompt_data
             show=prompt_show
-            cb={|data: Option<String>| {
-
+            cb={|data: Option<String>, id: u32| {
+                let name = match data {
+                    Some(n) => n,
+                    None => return,
+                };
+                spawn_local(async move {invoke("edit", to_value(&Edit{ id, name }).unwrap()).await;});
+            }}
+        />
+        <Prompt
+            question="Name".to_string()
+            data=new_prompt_data
+            show=new_prompt_show
+            cb={move |data: Option<String>, _id: u32| {
+                spawn_local(async move {
+                    let name = match data {
+                        Some(n) => n,
+                        None => return,
+                    };
+                    set_recording.set(false);
+                    invoke("new", to_value(&NewRec {file: invoke_argless("plugin:mic-recorder|stop_recording").await.try_into().unwrap(), name}).unwrap()).await;
+                })
             }}
         />
         <Show
             when = move || recording.get()
-            fallback = move || view!{<button on:click=move |_| spawn_local(async move {set_recording.set(true); invoke_argless("plugin:mic-recorder|start_recording").await;})>Start</button>}
+            fallback = move || view!{<button class="storp" on:click=move |_| spawn_local(async move {set_recording.set(true); invoke_argless("plugin:mic-recorder|start_recording").await;})><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c0c0c0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-mic-off-icon lucide-mic-off"><path d="M12 19v3"/><path d="M15 9.34V5a3 3 0 0 0-5.68-1.33"/><path d="M16.95 16.95A7 7 0 0 1 5 12v-2"/><path d="M18.89 13.23A7 7 0 0 0 19 12v-2"/><path d="m2 2 20 20"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12"/></svg></button>}
         >
-            <button on:click=move |_| spawn_local(async move {
-                let name = match prompt("Name", "") {
-                    Some(n) => n,
-                    None => return,
-                };
-                set_recording.set(false);
-                invoke("new", to_value(&NewRec {file: invoke_argless("plugin:mic-recorder|stop_recording").await.try_into().unwrap(), name}).unwrap()).await;
-            })>Stop</button>
+            <button class="storp" on:click=move |_| {
+                new_prompt_data.set("".to_string());
+                new_prompt_show.set(Some(0));
+            }><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c0c0c0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-mic-icon lucide-mic"><path d="M12 19v3"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><rect x="9" y="2" width="6" height="13" rx="3"/></svg></button>
         </Show>
-            <ul>
+        <button on:click=|_| {spawn_local(async {
+            invoke_argless("upload").await;
+        });}>Upload</button>
+        <ul>
             <For
                 each=move || files.get()
                 key=|file| file.0
@@ -153,11 +174,8 @@ pub fn App() -> impl IntoView {
                         <li>
                             <p>{file.name}</p>
                             <button on:click=move |_| {
-                                let name = match prompt("Name", &name.get()) {
-                                    Some(n) => n,
-                                    None => return,
-                                };
-                                spawn_local(async move {invoke("edit", to_value(&Edit{ id, name }).unwrap()).await;});
+                                prompt_data.set(name.get_untracked());
+                                prompt_show.set(Some(id));
                             }><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c0c0c0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-pencil-icon lucide-pencil"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg></button>
                             <button on:click=move |_| {
                                 spawn_local(async move {invoke("delete", to_value(&Delete {id}).unwrap()).await;});
@@ -174,14 +192,14 @@ pub fn App() -> impl IntoView {
 pub fn Prompt(
     question: String,
     data: RwSignal<String>,
-    show: RwSignal<bool>,
-    cb: impl Fn(Option<String>) + Send + Sync + 'static,
+    show: RwSignal<Option<u32>>,
+    cb: impl Fn(Option<String>, u32) + Send + Sync + 'static,
 ) -> impl IntoView {
     let cb = Arc::new(cb);
     view! {
-        <Show when=move || show.get()>
+        <Show when=move || show.get().is_some()>
             <div class="prompt">
-                <p>{question.clone()}</p>
+                <h1>{question.clone()}</h1>
                 <input
                     type="text"
                     bind:value=data
@@ -190,29 +208,31 @@ pub fn Prompt(
                         move |ev: ev::KeyboardEvent| {
                         match ev.key().as_str() {
                             "Enter" => {
-                                cb(Some(data.get_untracked()));
-                                show.set(false);
+                                cb(Some(data.get_untracked()), show.get().unwrap());
+                                show.set(None);
                             }
                             "Escape" => {
-                                cb(None);
-                                show.set(false);
+                                cb(None, show.get().unwrap());
+                                show.set(None);
                             }
                             _ => {}
                         }
                     }}
                 />
-                <button on:click={
-                        let cb = cb.clone();
-                        move |_| {
-                            cb(Some(data.get_untracked()));
-                            show.set(false);
-                    }}></button>
-                <button on:click={
-                        let cb = cb.clone();
-                        move |_| {
-                            cb(None);
-                            show.set(false);
-                    }}></button>
+                <div>
+                    <button on:click={
+                            let cb = cb.clone();
+                            move |_| {
+                                cb(Some(data.get_untracked()), show.get().unwrap());
+                                show.set(None);
+                        }}>Ok</button>
+                    <button on:click={
+                            let cb = cb.clone();
+                            move |_| {
+                                cb(None, show.get().unwrap());
+                                show.set(None);
+                        }}>Cancel</button>
+                </div>
             </div>
         </Show>
     }
