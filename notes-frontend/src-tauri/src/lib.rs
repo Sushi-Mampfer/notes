@@ -1,9 +1,10 @@
+use reqwest::{multipart::Form, Client, RequestBuilder};
 use serde::{Deserialize, Serialize};
-use sqlx::{query, query_as, sqlite::SqliteConnectOptions, FromRow, Pool, Row, Sqlite};
-use std::{fs, str::FromStr};
-use tauri::{
-    async_runtime::spawn, window, Emitter, Listener, Manager, WebviewUrl, WebviewWindowBuilder,
+use sqlx::{
+    query, query_as, sqlite::SqliteConnectOptions, FromRow, Pool, QueryBuilder, Row, Sqlite,
 };
+use std::{fs, str::FromStr};
+use tauri::{async_runtime::spawn, Emitter, Listener, Manager, WebviewWindowBuilder};
 
 struct AppData {
     pub pool: Pool<Sqlite>,
@@ -56,22 +57,43 @@ pub async fn run() {
                 .execute(&pool)
                 .await
                 .unwrap();
-                let rows: Vec<Recording> = query_as(r#"SELECT * FROM recordings ORDER BY id"#)
-                    .fetch_all(&pool)
-                    .await
-                    .unwrap();
+                query(
+                    r#"
+                    INSERT OR IGNORE INTO config(id, url)
+                    VALUES (1, "")
+                "#,
+                )
+                .execute(&pool)
+                .await
+                .unwrap();
+
                 let handle = app_handle.clone();
                 app_handle.listen_any("ready", move |_| {
-                    for r in &rows {
-                        handle.emit("file", r).unwrap();
-                    }
+                    let handle = handle.clone();
+                    spawn(async move {
+                        let rows: Vec<Recording> =
+                            query_as(r#"SELECT * FROM recordings ORDER BY id"#)
+                                .fetch_all(&handle.state::<AppData>().pool)
+                                .await
+                                .unwrap();
+                        for r in &rows {
+                            handle.emit("file", r).unwrap();
+                        }
+                    });
                 });
             });
             Ok(())
         })
         .plugin(tauri_plugin_mic_recorder::init())
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![new, edit, delete, upload])
+        .invoke_handler(tauri::generate_handler![
+            new,
+            edit,
+            delete,
+            upload,
+            get_url,
+            upload_files
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
@@ -140,16 +162,75 @@ async fn delete(app_handle: tauri::AppHandle, id: u32) {
 }
 
 #[tauri::command]
-fn upload(app_handle: tauri::AppHandle) {
-    let window = WebviewWindowBuilder::new(
+async fn upload(app_handle: tauri::AppHandle) {
+    WebviewWindowBuilder::from_config(
         &app_handle,
-        "upload_window",
-        tauri::WebviewUrl::App("".into()),
+        &app_handle.config().app.windows.get(1).unwrap().clone(),
     )
-    .title("Upload")
-    .inner_size(800.0, 600.0)
-    .center();
-    dbg!("hi");
-    window.build().unwrap();
-    dbg!("hi");
+    .unwrap()
+    .build()
+    .unwrap();
+}
+
+#[tauri::command]
+async fn get_url(app_handle: tauri::AppHandle) -> String {
+    query(
+        r#"
+        SELECT url FROM config
+        WHERE id = 1
+    "#,
+    )
+    .fetch_one(&app_handle.state::<AppData>().pool)
+    .await
+    .unwrap()
+    .get("url")
+}
+
+#[tauri::command]
+async fn upload_files(app_handle: tauri::AppHandle, url: String, files: Vec<u32>) {
+    query(
+        r#"
+        UPDATE config
+        SET url = ?
+        WHERE id = 1
+    "#,
+    )
+    .bind(&url)
+    .execute(&app_handle.state::<AppData>().pool)
+    .await
+    .unwrap();
+    let mut query: QueryBuilder<Sqlite> = QueryBuilder::new(
+        r#"
+        UPDATE recordings
+        SET uploaded = 1
+        WHERE id IN (
+    "#,
+    );
+    let mut seperated = query.separated(", ");
+    for i in files {
+        seperated.push_bind(i);
+    }
+    seperated.push_unseparated(
+        r#")
+        RETURNING name, file
+    "#,
+    );
+    let rows = query
+        .build()
+        .fetch_all(&app_handle.state::<AppData>().pool)
+        .await
+        .unwrap();
+    let mut form = Form::new();
+    for i in rows {
+        form = form
+            .file::<String, String>(i.get("name"), i.get("file"))
+            .await
+            .unwrap();
+    }
+    Client::new()
+        .post(format!("{}/upload", url))
+        .multipart(form)
+        .send()
+        .await
+        .unwrap();
 }

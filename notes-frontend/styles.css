@@ -73,9 +73,18 @@ button {
 	outline: none;
 }
 
-body {
+body,
+html {
 	padding: 0;
 	margin: 0;
+	overflow: hidden;
+}
+
+.top {
+	width: 100vw;
+	height: 85vw;
+	position: fixed;
+	z-index: 10;
 }
 
 .storp {
@@ -96,6 +105,12 @@ body {
 	height: 27vw;
 }
 
+.upload_btn {
+	width: 30vw;
+	margin: 10vw 35vw 5vw;
+	height: 15vw;
+}
+
 .prompt {
 	border-radius: 7.5vw;
 	position: absolute;
@@ -109,6 +124,7 @@ body {
 	display: flex;
 	align-items: center;
 	flex-direction: column;
+	z-index: 100;
 }
 
 .prompt>h1 {
@@ -132,7 +148,17 @@ body {
 }
 
 ul {
+	margin: 0;
+	height: calc(100vh - 90vw);
+	margin-top: 90vw;
 	padding: 0 15vw;
+	overflow-y: auto;
+	scrollbar-width: none;
+	-ms-overflow-style: none;
+}
+
+ul::-webkit-scrollbar {
+	display: none;
 }
 
 ul>li {
@@ -152,4 +178,43 @@ ul>li>p {
 	line-height: 15vw;
 	display: inline-block;
 	width: 40vw;
+}
+
+.upload {
+	margin: 0;
+	padding: 0;
+	width: 100vw;
+	position: fixed;
+}
+
+.upload>input {
+	width: 74vw;
+	height: 7vw;
+	margin: 10vw;
+	margin-bottom: 5vw;
+	padding: 3vw;
+	border: 0;
+}
+
+.upload>button {
+	width: 40vw;
+	height: 13vw;
+	margin: 0 30vw;
+}
+
+.uploads {
+	margin-top: 41vw;
+	height: calc(100vh - 41vw);
+	padding: 0 15vw;
+}
+
+.uploads>li>input {
+	width: 5vw;
+	height: 5vw;
+	padding: 0;
+	margin: 0;
+}
+
+.uploads>li>p {
+	width: 65vw;
 }

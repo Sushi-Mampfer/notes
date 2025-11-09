@@ -13,9 +13,19 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "notes-frontend",
+        "title": "Notes",
         "width": 350,
-        "height": 550,
+        "height": 600,
+        "resizable": false,
+        "maximizable": false
+      },
+      {
+        "label": "upload",
+        "title": "Upload",
+        "create": false,
+        "url": "upload",
+        "width": 350,
+        "height": 600,
         "resizable": false,
         "maximizable": false
       }
