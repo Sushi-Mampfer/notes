@@ -1,19 +1,17 @@
 pub mod app;
 pub mod pages;
 pub mod transcription;
-pub mod upload;
+pub mod query;
+mod upload;
+mod ai;
+pub mod datatypes;
 
-use sqlx::{sqlite::SqliteConnectOptions, Pool, Sqlite};
-
-#[derive(Clone)]
-struct AppState {
-    pool: Pool<Sqlite>,
-}
 
 #[cfg(feature = "ssr")]
-#[cfg(not(target_arch = "wasm32"))]
 #[tokio::main]
 async fn main() {
+    use sqlx::{Pool, Sqlite, sqlite::SqliteConnectOptions};
+    use crate::datatypes::AppState;
     use crate::{app::*, upload::upload};
     use axum::{extract::DefaultBodyLimit, routing::post, Extension, Router};
     use futures_util::StreamExt;
@@ -65,7 +63,7 @@ async fn main() {
             file TEXT NOT NULL,
             name TEXT NOT NULL,
             transcript TEXT,
-            guide TEXT
+            summary TEXT
         )
     "#,
     )
@@ -74,10 +72,11 @@ async fn main() {
     .unwrap();
 
     let state = AppState { pool };
+    let state_pass = state.clone();
 
     let app = Router::new()
         .route("/upload", post(upload))
-        .leptos_routes(&leptos_options, routes, {
+        .leptos_routes_with_context(&leptos_options, routes, move || provide_context(state_pass.clone()), {
             let leptos_options = leptos_options.clone();
             move || shell(leptos_options.clone())
         })

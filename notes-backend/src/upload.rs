@@ -3,7 +3,7 @@ use sqlx::{query, Row};
 use tokio::{fs::File, io::AsyncWriteExt, spawn};
 use uuid::Uuid;
 
-use crate::{transcription::transcribe, AppState};
+use crate::{datatypes::AppState, ai::sumarize, transcription::transcribe};
 
 pub async fn upload(
     Extension(state): Extension<AppState>,
@@ -30,7 +30,20 @@ pub async fn upload(
 
         let pool = state.pool.clone();
         spawn(async move {
-            transcribe(pool, row.get("id"), file_name).await;
+            let transcript = transcribe(file_name).await;
+            let summary = sumarize(transcript.clone()).await;
+            query(
+                r#"
+                UPDATE entries 
+                SET transcript = ?, summary = ?
+                WHERE id = ?
+            "#,
+            )
+            .bind(transcript).bind(summary)
+            .bind(row.get::<u32, &str>("id"))
+            .execute(&pool)
+            .await
+            .unwrap();
         });
     }
     StatusCode::OK

@@ -1,8 +1,7 @@
-use sqlx::{query, Pool, Sqlite};
-use whisper_rs::{FullParams, SamplingStrategy, WhisperContext, WhisperContextParameters, install_logging_hooks};
+use whisper_rs::{FullParams, SamplingStrategy, WhisperContext, WhisperContextParameters};
 
 // https://codeberg.org/tazz4843/whisper-rs/src/branch/master/examples/basic_use.rs
-pub async fn transcribe(pool: Pool<Sqlite>, id: u32, file: String) {
+pub async fn transcribe(file: String) -> String {
     let samples: Vec<f32> = hound::WavReader::open(file)
         .unwrap()
         .into_samples::<f32>()
@@ -61,7 +60,7 @@ pub async fn transcribe(pool: Pool<Sqlite>, id: u32, file: String) {
     let mut out = String::new();
     for segment in state.as_iter() {
         out.push_str(&format!(
-            "[{} - {}]: {}",
+            "[{} - {}]: {}\n",
             // these timestamps are in centiseconds (10s of milliseconds)
             segment.start_timestamp(),
             segment.end_timestamp(),
@@ -70,18 +69,8 @@ pub async fn transcribe(pool: Pool<Sqlite>, id: u32, file: String) {
             segment
         ));
     }
-    query(
-        r#"
-        UPDATE entries 
-        SET transcript = ?
-        WHERE id = ?
-    "#,
-    )
-    .bind(out)
-    .bind(id)
-    .execute(&pool)
-    .await
-    .unwrap();
+    out
+    
 }
 
 // thanks claude

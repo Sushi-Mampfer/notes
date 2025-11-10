@@ -18,7 +18,7 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
                 <Stylesheet id="leptos" href="/pkg/notes-backend.css" />
                 <MetaTags />
             </head>
-            <body>
+            <body class="h-full w-full bg-gray-950">
                 <App />
             </body>
         </html>
@@ -30,7 +30,7 @@ pub fn App() -> impl IntoView {
     provide_meta_context();
 
     view! {
-        <Title text="Welcome to Leptos" />
+        <Title text="Notes" />
         <Router>
             <main>
                 <Routes fallback=|| "Page not found.".into_view()>
