@@ -9,7 +9,7 @@ Build with leptos, whisper-rs and ollama. \
 Transcribes and summarizes the lectures.
 
 ## Demo
-https://hc-cdn.hel1.your-objectstorage.com/s/v3/aeb94e7f22188dffab04b249f23850efd75b96e1_demo.mp4
+https://hc-cdn.hel1.your-objectstorage.com/s/v3/aeb94e7f22188dffab04b249f23850efd75b96e1_demo.mp4 \
 I've used the audio of a 1Brown3Blue video. \
 There is an already transcribed version, because it takes about 20 minutes to transcribe the whole video. \
 The output is not formated yet, because I haven't decided on a specific AI model to use and they all have different output
