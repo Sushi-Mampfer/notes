@@ -3,7 +3,12 @@ use serde::{Deserialize, Serialize};
 use sqlx::{
     query, query_as, sqlite::SqliteConnectOptions, FromRow, Pool, QueryBuilder, Row, Sqlite,
 };
-use std::{fs, str::FromStr};
+use std::{
+    fs::{self},
+    path::PathBuf,
+    process::{Command, Stdio},
+    str::FromStr,
+};
 use tauri::{async_runtime::spawn, Emitter, Listener, Manager, WebviewWindowBuilder};
 
 struct AppData {
@@ -222,8 +227,31 @@ async fn upload_files(app_handle: tauri::AppHandle, url: String, files: Vec<u32>
         .unwrap();
     let mut form = Form::new();
     for i in rows {
+        let mut path = PathBuf::from(i.get::<String, &str>("file"));
+        if path.set_extension("con.wav") && !path.exists() {
+            let _ = Command::new("ffmpeg")
+                .arg("-y")
+                .arg("-i")
+                .arg::<String>(i.get("file"))
+                .arg("-vn")
+                .arg("-ac")
+                .arg("1")
+                .arg("-ar")
+                .arg("16000")
+                .arg("-c:a")
+                .arg("pcm_s16le")
+                .arg("-map_metadata")
+                .arg("-1")
+                .arg("-f")
+                .arg("wav")
+                .arg(&path)
+                .stdout(Stdio::null())
+                .stderr(Stdio::piped())
+                .status()
+                .unwrap();
+        }
         form = form
-            .file::<String, String>(i.get("name"), i.get("file"))
+            .file::<String, String>(i.get("name"), path.to_str().unwrap().to_owned())
             .await
             .unwrap();
     }
